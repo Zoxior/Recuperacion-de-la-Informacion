@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.ipynb_checkpoints/
+.DS_Store
+*.log
+# Copias originales redundantes; se usan las rutas normalizadas dentro de data/scifact/
+/corpus-00000-of-00001.parquet
+/queries-00000-of-00001.parquet
