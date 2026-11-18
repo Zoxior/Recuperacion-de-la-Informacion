@@ -37,24 +37,29 @@ La primera ejecucion descarga las stopwords inglesas de NLTK y construye el indi
 `GET /health` responde con el estado y la cantidad de documentos indexados:
 
 ```json
-{"status":"ok","message":"Servicio de busqueda activo","documents_indexed":5183}
+{
+  "status": "ok",
+  "message": "Servicio de busqueda activo",
+  "documents_indexed": 5183
+}
 ```
 
 `POST /search` requiere `Content-Type: application/json`:
 
 ```json
-{"query":"What causes cognitive impairment?","model":"bm25","top_k":10}
+{ "query": "What causes cognitive impairment?", "model": "bm25", "top_k": 10 }
 ```
 
 `model` acepta `bm25` o `tfidf`; `top_k` es un entero de 1 a 100 (por defecto 10). La respuesta contiene `model`, `query` y una lista `results` con `rank`, `document_id`, `score`, `title` y `snippet`.
 
 ### Postman
 
-1. Para health: crea una solicitud **GET** a `https://TU-SERVICIO.onrender.com/health` y pulsa **Send**.
-2. Para buscar: crea una solicitud **POST** a `https://TU-SERVICIO.onrender.com/search`.
-3. En **Headers**, agrega `Content-Type` = `application/json`.
-4. En **Body**, selecciona **raw** y el tipo **JSON**; pega el ejemplo anterior.
-5. Prueba tambien `"model":"tfidf"` y distintos valores de `top_k`.
+1. Para health: crea una solicitud **GET** a `https://recuperacion-de-la-informacion.onrender.com/health` y pulsa **Send**.
+2. Para buscar por URL: crea una solicitud **GET** a `https://recuperacion-de-la-informacion.onrender.com/search?query=cancer&model=bm25&top_k=3`. La consulta va en la URL y el Body queda vacio.
+3. Para buscar con JSON: crea una solicitud **POST** a `https://recuperacion-de-la-informacion.onrender.com/search`.
+4. En **Headers**, agrega `Content-Type` = `application/json`.
+5. En **Body**, selecciona **raw** y el tipo **JSON**; pega el ejemplo anterior.
+6. Prueba tambien `"model":"tfidf"` y distintos valores de `top_k`.
 
 Casos de error esperados (HTTP 400):
 
