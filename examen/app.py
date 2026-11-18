@@ -106,10 +106,39 @@ def buscar(modelo: str, consulta: str, top_k: int) -> list[tuple[str, float]]:
     return sorted(scores.items(), key=lambda item: (-item[1], item[0]))[:top_k]
 
 
+def parsear_top_k(raw, desde_url: bool):
+    """Devuelve un entero entre 1 y 100, o None si no es valido.
+
+    En GET los parametros llegan como texto ("5"), en POST/JSON como numero.
+    """
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, str) and desde_url:
+        raw = raw.strip()
+        if not raw.isdigit():
+            return None
+        raw = int(raw)
+    if not isinstance(raw, int) or not 1 <= raw <= 100:
+        return None
+    return raw
+
+
 print(f"Cargando corpus desde {CORPUS_PATH} ...")
 docs, texts = cargar_corpus(CORPUS_PATH)
 idx = construir_indice(texts)
 print(f"Servicio listo: {idx['N']} documentos indexados.")
+
+
+@app.get("/")
+def inicio():
+    return jsonify({
+        "service": "Buscador SciFact (TF-IDF y BM25)",
+        "endpoints": {
+            "GET /health": "estado del servicio",
+            "GET /search?query=...&model=bm25|tfidf&top_k=10": "busqueda por URL",
+            "POST /search": "busqueda con JSON {query, model, top_k}",
+        },
+    })
 
 
 @app.get("/health")
@@ -118,24 +147,33 @@ def health():
                     "documents_indexed": idx["N"]})
 
 
-@app.post("/search")
+@app.route("/search", methods=["GET", "POST"])
 def search():
-    if not request.is_json:
-        return jsonify({"error": "Content-Type debe ser application/json."}), 400
-    data = request.get_json(silent=True)
-    if not isinstance(data, dict):
-        return jsonify({"error": "El cuerpo debe ser un objeto JSON valido."}), 400
+    # GET: parametros en la URL. POST: cuerpo JSON.
+    desde_url = request.method == "GET"
+    if desde_url:
+        data = request.args.to_dict()
+    else:
+        if not request.is_json:
+            return jsonify({"error": "Content-Type debe ser application/json."}), 400
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"error": "El cuerpo debe ser un objeto JSON valido."}), 400
+
     query = data.get("query")
     if not isinstance(query, str) or not query.strip():
         return jsonify({"error": "'query' debe ser un texto no vacio."}), 400
+
     model = data.get("model", "bm25")
     if not isinstance(model, str) or model.lower() not in {"bm25", "tfidf"}:
         return jsonify({"error": "'model' debe ser 'bm25' o 'tfidf'."}), 400
     model = model.lower()
-    raw_k = data.get("top_k", 10)
-    if isinstance(raw_k, bool) or not isinstance(raw_k, int) or not 1 <= raw_k <= 100:
+
+    top_k = parsear_top_k(data.get("top_k", 10), desde_url)
+    if top_k is None:
         return jsonify({"error": "'top_k' debe ser un entero entre 1 y 100."}), 400
-    ranking = buscar(model, query, raw_k)
+
+    ranking = buscar(model, query, top_k)
     results = []
     for rank, (doc_id, score) in enumerate(ranking, 1):
         doc = docs[doc_id]
